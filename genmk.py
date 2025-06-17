@@ -68,7 +68,8 @@ class GenMK:
         self.logger.setLevel(logging.INFO)
 
     def train(self, rank, alpha, batch_size, num_epochs,
-              train_text_encoders=False, using_ampere_gpu=False):
+              train_text_encoders=False, using_ampere_gpu=False,
+              text_encoders_rank=None, text_encoders_alpha=None):
         # load multimodal model from Hugging Face
         model_path = 'microsoft/Phi-4-multimodal-instruct'
         self.logger.info(f'Loading {model_path} model...')
@@ -210,12 +211,14 @@ class GenMK:
         )
         unet.add_adapter(unet_lora_config)
         if train_text_encoders:
+            if text_encoders_rank is None:
+                text_encoders_rank = rank
+            if text_encoders_alpha is None:
+                text_encoders_alpha = alpha
             text_lora_config = LoraConfig(
-                r=rank,
-                lora_alpha=alpha,
+                r=text_encoders_rank, lora_alpha=text_encoders_alpha,
                 init_lora_weights='gaussian',
-                target_modules=['q_proj', 'k_proj', 'v_proj', 'out_proj'],
-            )
+                target_modules=['q_proj', 'k_proj', 'v_proj', 'out_proj'])
             text_encoder_one.add_adapter(text_lora_config)
             text_encoder_two.add_adapter(text_lora_config)
         self.logger.info('Added LoRA weights')
